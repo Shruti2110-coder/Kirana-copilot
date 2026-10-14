@@ -1,0 +1,25 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: kirana-mongo
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db # your data survives restarts
+
+  # Optional web UI to browse your data at http://localhost:8081
+  mongo-express:
+    image: mongo-express:1
+    container_name: kirana-mongo-ui
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/
+      ME_CONFIG_BASICAUTH: "false"
+
+volumes:
+  mongo-data:
