@@ -1,15 +1,28 @@
-/** Demo data so the dashboard looks alive for the video. Run: npm run db:seed */
+/** Demo data so the dashboard looks alive for the video. Run: npm run db:seed [mobile] (default 9999999999) */
 import mongoose from "mongoose";
-import { connectDB, getShop, findOrCreateCustomer } from "../src/lib/db";
+import { connectDB, openShop, findOrCreateCustomer } from "../src/lib/db";
+import { normalizePhone } from "../src/lib/auth";
 import { Customer, Reminder, Transaction } from "../src/lib/models";
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
 
 async function main() {
   await connectDB();
-  await Promise.all([Reminder.deleteMany({}), Transaction.deleteMany({}), Customer.deleteMany({})]);
+  const ownerPhone = normalizePhone(process.argv[2] ?? "9999999999");
+  if (!ownerPhone) throw new Error("Pass a valid 10-digit mobile number");
+  const shop = await openShop({
+    owner: process.env.SHOP_OWNER || "Owner",
+    name: process.env.SHOP_NAME || "My Kirana Store",
+    category: "kirana",
+    ownerPhone,
+  });
+  // Clear only this shop's demo data; other shops are untouched.
+  const old = await Customer.find({ shopId: shop.id }, { _id: 1 }).lean();
+  const oldTxns = await Transaction.find({ customerId: { $in: old.map((c) => c._id) } }, { _id: 1 }).lean();
+  await Reminder.deleteMany({ transactionId: { $in: oldTxns.map((t) => t._id) } });
+  await Transaction.deleteMany({ customerId: { $in: old.map((c) => c._id) } });
+  await Customer.deleteMany({ shopId: shop.id });
 
-  const shop = await getShop();
   const entries: [string, string | null, "credit" | "payment", number, string | null, number][] = [
     ["Ramesh", "9876543210", "credit", 500, "atta, dal", 2],
     ["Ramesh", null, "credit", 320, "doodh, bread", 0],
@@ -37,7 +50,7 @@ async function main() {
       updatedAt: daysAgo(ago),
     });
   }
-  console.log(`Seeded ${entries.length} entries for ${shop.name}`);
+  console.log(`Seeded ${entries.length} entries for ${shop.name} (log in with ${ownerPhone})`);
 }
 
 main()

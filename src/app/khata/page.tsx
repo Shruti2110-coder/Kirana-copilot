@@ -21,7 +21,8 @@ export default function KhataPage(props: Props) {
 
 async function Khata({ searchParams }: Props) {
   await connection();
-  const [{ filter }, customers, locale] = await Promise.all([searchParams, getCustomers(), getLocale(), requireOwner()]);
+  const shop = await requireOwner();
+  const [{ filter }, customers, locale] = await Promise.all([searchParams, getCustomers(shop.id), getLocale()]);
   const tr = dict(locale);
   return (
     <>

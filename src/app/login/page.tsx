@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { getShop } from "@/lib/db";
 import { getOwnerSession } from "@/lib/auth";
 import { dict } from "../i18n";
 import { getLocale } from "../i18n-server";
@@ -17,21 +16,20 @@ export default function LoginPage() {
   );
 }
 
-/** Owner login by mobile number. No owner yet: set one up first. Already logged in: go home. */
+/** Anyone can start: name, shop name and mobile. Already logged in: go home. */
 async function Login() {
   await connection();
-  const [shop, session, locale] = await Promise.all([getShop(), getOwnerSession(), getLocale()]);
-  if (!shop.onboarded) redirect("/welcome");
+  const [session, locale] = await Promise.all([getOwnerSession(), getLocale()]);
   if (session) redirect("/");
   const t = dict(locale);
   return (
     <div className="welcome">
       <LogoMark size={48} />
       <header>
-        <h1 className="h1">{t.loginTitle}</h1>
-        <p className="muted" style={{ margin: "6px 0 0" }}>{t.loginSub(shop.name)}</p>
+        <h1 className="h1">{t.welcomeTitle}</h1>
+        <p className="muted" style={{ margin: "6px 0 0" }}>{t.welcomeSub}</p>
       </header>
-      <PhoneLogin locale={locale} mode="login" />
+      <PhoneLogin locale={locale} />
     </div>
   );
 }

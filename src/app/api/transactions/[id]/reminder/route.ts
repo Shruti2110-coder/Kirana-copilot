@@ -1,22 +1,20 @@
 import { NextResponse } from "next/server";
 import { requireApiOwner } from "@/lib/auth";
-import { getShop } from "@/lib/db";
 import { Reminder } from "@/lib/models";
 import { amountToCollect, daysSince, getTransaction, reminderLevel, whatsappLink } from "@/lib/ledger";
 import { writeReminder } from "@/lib/ai";
 
 /** AI writes a reminder whose tone depends on how long the udhaar has been pending. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { denied } = await requireApiOwner();
+  const { shop, denied } = await requireApiOwner();
   if (denied) return denied;
   const { id } = await params;
-  const row = await getTransaction(id);
+  const row = await getTransaction(id, shop.id);
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { txn, customer } = row;
   if (txn.status === "paid") return NextResponse.json({ error: "Already paid" }, { status: 400 });
 
   const { lang } = await req.json().catch(() => ({}));
-  const shop = await getShop();
   const days = daysSince(txn.createdAt);
   const level = reminderLevel(days);
   const amount = await amountToCollect(txn);

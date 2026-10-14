@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireApiOwner } from "@/lib/auth";
-import { getShop } from "@/lib/db";
 import { amountToCollect, getTransaction, whatsappLink } from "@/lib/ledger";
 import { createPaymentOrder, paypalEnabled } from "@/lib/paypal";
 
 /** Create (or reuse) a PayPal payment link for a pending credit and a WhatsApp message to send it. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { denied } = await requireApiOwner();
+  const { shop, denied } = await requireApiOwner();
   if (denied) return denied;
   const { id } = await params;
-  const row = await getTransaction(id);
+  const row = await getTransaction(id, shop.id);
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { txn, customer } = row;
   if (txn.type !== "credit") return NextResponse.json({ error: "Only udhaar entries need a payment link" }, { status: 400 });
@@ -19,7 +18,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const { lang } = await req.json().catch(() => ({}));
-  const shop = await getShop();
   const amount = await amountToCollect(txn);
   if (amount <= 0) return NextResponse.json({ error: "Nothing left to collect from this customer" }, { status: 400 });
 

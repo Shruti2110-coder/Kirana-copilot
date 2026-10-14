@@ -1,9 +1,9 @@
 /**
  * Owner login by mobile number.
  *
- * - First-time setup saves the owner's name, shop name and mobile; after that, only that
- *   mobile number logs in. There is no one-time code, so this identifies the owner but does
- *   not prove it: anyone who knows the owner's number can log in.
+ * - Anyone can use the app: they enter their name, shop name and mobile, and each mobile
+ *   number gets its own shop. There is no one-time code, so this identifies the owner but
+ *   does not prove it: anyone who knows a shop's number can open that shop.
  * - Sessions: a random 32-byte token in an httpOnly cookie; the database keeps only
  *   its SHA-256, so a leaked database can't be used to log in. Valid 30 days.
  *
@@ -11,7 +11,7 @@
  */
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
-import { connectDB, getShop, setupShop } from "./db";
+import { connectDB, getShopById, openShop } from "./db";
 import { Session } from "./models";
 import type { ShopType } from "./catalog";
 
@@ -40,21 +40,12 @@ export class AuthError extends Error {
   }
 }
 
-/**
- * Log this browser in. No owner yet: `setup` (owner and shop name) is required and this
- * number becomes the owner's. Afterwards only the owner's number is accepted.
- */
-export async function loginWithPhone(rawPhone: string, setup?: { owner: string; name: string; category: ShopType }) {
+/** Log this browser in to the shop for this number, creating the shop if the number is new. */
+export async function loginWithPhone(rawPhone: string, details: { owner: string; name: string; category: ShopType }) {
   const phone = normalizePhone(rawPhone);
   if (!phone) throw new AuthError("Enter a valid 10-digit Indian mobile number.");
 
-  let shop = await getShop();
-  if (!shop.onboarded) {
-    if (!setup) throw new AuthError("Set up the shop first.", 409);
-    shop = await setupShop({ ...setup, ownerPhone: phone });
-  } else if (phone !== shop.ownerPhone) {
-    throw new AuthError("This number is not registered as the shop owner.", 403);
-  }
+  const shop = await openShop({ ...details, ownerPhone: phone });
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
@@ -76,8 +67,7 @@ export async function getOwnerSession() {
   await connectDB();
   const session = await Session.findOne({ tokenHash: sha256(token), expiresAt: { $gt: new Date() } }).lean();
   if (!session) return null;
-  const shop = await getShop();
-  return shop.onboarded && String(session.shopId) === shop.id ? shop : null;
+  return getShopById(String(session.shopId));
 }
 
 export async function logout() {

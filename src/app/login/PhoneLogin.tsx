@@ -7,11 +7,8 @@ import { dict, type Locale } from "../i18n";
 import type { ShopType } from "@/lib/catalog";
 import ShopTypePicker from "../ui/ShopTypePicker";
 
-/**
- * "setup": owner name, shop name and mobile; that number becomes the owner's login.
- * "login": the owner's mobile number only.
- */
-export default function PhoneLogin({ locale, mode }: { locale: Locale; mode: "setup" | "login" }) {
+/** Owner name, shop name, shop type and mobile. Each mobile number has its own shop. */
+export default function PhoneLogin({ locale }: { locale: Locale }) {
   const t = dict(locale);
   const router = useRouter();
   const [owner, setOwner] = useState("");
@@ -26,7 +23,7 @@ export default function PhoneLogin({ locale, mode }: { locale: Locale; mode: "se
     setBusy(true);
     setError(null);
     try {
-      await post("/api/auth/login", mode === "setup" ? { phone, owner, name, category } : { phone });
+      await post("/api/auth/login", { phone, owner, name, category });
       router.replace("/");
       router.refresh();
     } catch (err) {
@@ -35,22 +32,18 @@ export default function PhoneLogin({ locale, mode }: { locale: Locale; mode: "se
     }
   }
 
-  const ready = /\d{10}/.test(phone.replace(/\D/g, "")) && (mode === "login" || (owner.trim() && name.trim()));
+  const ready = /\d{10}/.test(phone.replace(/\D/g, "")) && owner.trim() && name.trim();
   return (
     <form className="panel-pad welcome-form" onSubmit={submit}>
-      {mode === "setup" && (
-        <>
-          <label className="field">
-            {t.ownerName}
-            <input id="owner-name" className="input" autoFocus autoComplete="name" placeholder={t.ownerNamePh} maxLength={40} value={owner} onChange={(e) => setOwner(e.target.value)} />
-          </label>
-          <label className="field">
-            {t.shopName}
-            <input id="shop-name" className="input" autoComplete="organization" placeholder={t.shopNamePh} maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <ShopTypePicker locale={locale} value={category} onChange={setCategory} />
-        </>
-      )}
+      <label className="field">
+        {t.ownerName}
+        <input id="owner-name" className="input" autoFocus autoComplete="name" placeholder={t.ownerNamePh} maxLength={40} value={owner} onChange={(e) => setOwner(e.target.value)} />
+      </label>
+      <label className="field">
+        {t.shopName}
+        <input id="shop-name" className="input" autoComplete="organization" placeholder={t.shopNamePh} maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
+      </label>
+      <ShopTypePicker locale={locale} value={category} onChange={setCategory} />
       <label className="field">
         {t.ownerPhone}
         <div className="phone-input">
@@ -61,7 +54,6 @@ export default function PhoneLogin({ locale, mode }: { locale: Locale; mode: "se
             type="tel"
             inputMode="tel"
             autoComplete="tel-national"
-            autoFocus={mode === "login"}
             placeholder={t.ownerPhonePh}
             maxLength={14}
             value={phone}
@@ -71,7 +63,7 @@ export default function PhoneLogin({ locale, mode }: { locale: Locale; mode: "se
         <span className="small muted">{t.ownerPhoneHint}</span>
       </label>
       <button className="btn btn-primary" disabled={busy || !ready}>
-        {busy ? t.loggingIn : mode === "setup" ? t.startApp : t.verifyLogin}
+        {busy ? t.loggingIn : t.startApp}
       </button>
       {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
     </form>

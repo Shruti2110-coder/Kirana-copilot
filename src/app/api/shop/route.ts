@@ -10,15 +10,15 @@ const Body = z.object({
   category: z.enum(SHOP_TYPES, { error: "Choose the type of shop" }),
 });
 
-/** The logged-in owner changes their name or the shop name. First-time setup goes through /api/auth. */
+/** The logged-in owner changes their name or the shop name. Logging in goes through /api/auth. */
 export async function POST(req: Request) {
-  const { denied } = await requireApiOwner();
+  const { shop, denied } = await requireApiOwner();
   if (denied) return denied;
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   try {
-    const shop = await updateShop(parsed.data);
-    return NextResponse.json({ owner: shop.owner, name: shop.name, category: shop.category });
+    const updated = await updateShop(shop.id, parsed.data);
+    return NextResponse.json({ owner: updated.owner, name: updated.name, category: updated.category });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 503 });
   }

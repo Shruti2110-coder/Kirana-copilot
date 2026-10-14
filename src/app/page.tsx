@@ -30,7 +30,8 @@ function greeting(locale: Locale) {
 
 async function Home() {
   await connection(); // always read fresh data
-  const [shop, customers, locale] = await Promise.all([requireOwner(), getCustomers(), getLocale()]);
+  const shop = await requireOwner();
+  const [customers, locale] = await Promise.all([getCustomers(shop.id), getLocale()]);
   const tr = dict(locale);
   const ago = (iso: string | null) => agoIn(locale, iso);
   const t = totals(customers);

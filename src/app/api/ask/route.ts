@@ -6,13 +6,13 @@ import { daysSince } from "@/lib/ledger";
 
 /** "Sabse zyada udhaar kiska hai?" — answer questions about the ledger. */
 export async function POST(req: Request) {
-  const { denied } = await requireApiOwner();
+  const { shop, denied } = await requireApiOwner();
   if (denied) return denied;
   const { question } = await req.json().catch(() => ({}));
   if (!question || typeof question !== "string") return NextResponse.json({ error: "Ask a question" }, { status: 400 });
 
   // Send the model a compact view of the ledger, not raw rows.
-  const ledger = (await getLedger()).map((c) => ({
+  const ledger = (await getLedger(shop.id)).map((c) => ({
     customer: c.name,
     due_inr: c.due,
     entries: c.transactions.slice(0, 20).map((t) => ({

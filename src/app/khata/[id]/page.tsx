@@ -27,7 +27,8 @@ export default function CustomerPage(props: Props) {
 async function Customer({ params }: Props) {
   await connection();
   const { id } = await params;
-  const [c, locale] = await Promise.all([getCustomer(id), getLocale(), requireOwner()]);
+  const shop = await requireOwner();
+  const [c, locale] = await Promise.all([getCustomer(shop.id, id), getLocale()]);
   if (!c) notFound();
   const tr = dict(locale);
   const ago = (iso: string | null) => agoIn(locale, iso);

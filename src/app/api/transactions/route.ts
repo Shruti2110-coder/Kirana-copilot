@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireApiOwner } from "@/lib/auth";
 import { z } from "zod";
-import { getShop, findOrCreateCustomer, getLedger } from "@/lib/db";
+import { findOrCreateCustomer, getLedger } from "@/lib/db";
 import { Transaction } from "@/lib/models";
 import { customerDue } from "@/lib/ledger";
 
 export async function GET() {
-  const { denied } = await requireApiOwner();
+  const { shop, denied } = await requireApiOwner();
   if (denied) return denied;
   try {
-    return NextResponse.json(await getLedger());
+    return NextResponse.json(await getLedger(shop.id));
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 503 });
   }
@@ -30,14 +30,13 @@ const Body = z.object({
 
 /** Save an entry the owner has confirmed. */
 export async function POST(req: Request) {
-  const { denied } = await requireApiOwner();
+  const { shop, denied } = await requireApiOwner();
   if (denied) return denied;
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   const { customer, amount, type, items, phone, note } = parsed.data;
 
   try {
-    const shop = await getShop();
     const cust = await findOrCreateCustomer(shop.id, customer, phone);
     const txn = await Transaction.create({
       customerId: cust._id,

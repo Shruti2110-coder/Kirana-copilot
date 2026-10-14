@@ -46,12 +46,12 @@ export function summarise(c: LedgerRow): CustomerSummary {
   return { ...c, status, oldestDays, lastActivity: c.transactions[0]?.createdAt ?? null, openIds: open.map((t) => t.id) };
 }
 
-export async function getCustomers() {
-  return (await getLedger()).map(summarise);
+export async function getCustomers(shopId: string) {
+  return (await getLedger(shopId)).map(summarise);
 }
 
-export async function getCustomer(id: string) {
-  return (await getCustomers()).find((c) => c.id === id) ?? null;
+export async function getCustomer(shopId: string, id: string) {
+  return (await getCustomers(shopId)).find((c) => c.id === id) ?? null;
 }
 
 export type ActivityItem = TxnDTO & { customerId: string; customerName: string };

@@ -8,11 +8,12 @@ const shopSchema = new Schema(
     category: { type: String, enum: ["kirana", "medical", "clothes"], default: "kirana" },
     /** true once the owner has entered their own name and shop name on the welcome screen */
     onboarded: { type: Boolean, default: false },
-    /** owner's mobile, "+91XXXXXXXXXX"; the only number that can log in */
+    /** owner's mobile, "+91XXXXXXXXXX"; logging in with it opens this shop */
     ownerPhone: { type: String, default: null },
   },
   { timestamps: true },
 );
+shopSchema.index({ ownerPhone: 1 }, { unique: true, partialFilterExpression: { ownerPhone: { $type: "string" } } });
 
 const customerSchema = new Schema(
   {

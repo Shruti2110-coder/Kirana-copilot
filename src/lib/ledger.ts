@@ -2,14 +2,17 @@ import { isValidObjectId, type Types } from "mongoose";
 import { connectDB } from "./db";
 import { Customer, Transaction } from "./models";
 
-/** Load a transaction and its customer. Returns null for bad or unknown ids. */
-export async function getTransaction(id: string) {
+/**
+ * Load a transaction and its customer. Returns null for bad or unknown ids, or, when `shopId`
+ * is given, for another shop's entry. (The PayPal return page has no shop, so it omits it.)
+ */
+export async function getTransaction(id: string, shopId?: string) {
   if (!isValidObjectId(id)) return null;
   await connectDB();
   const txn = await Transaction.findById(id);
   if (!txn) return null;
   const customer = await Customer.findById(txn.customerId);
-  if (!customer) return null;
+  if (!customer || (shopId && String(customer.shopId) !== shopId)) return null;
   return { txn, customer };
 }
 
